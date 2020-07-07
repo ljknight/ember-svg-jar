@@ -2,15 +2,42 @@ import { assign } from '@ember/polyfills';
 import { isNone } from '@ember/utils';
 import { htmlSafe } from '@ember/string';
 
+const accessibilityElements = ['title', 'desc'];
+
+export function createAccessibilityElements(attrs) {
+  const { title, desc } = attrs;
+
+  if (!title && !desc) {
+    return '';
+  }
+
+  return accessibilityElements.reduce((elements, tag) => {
+    if (attrs[tag]) {
+      return elements.concat(`<${tag} id="${tag}">${attrs[tag]}</${tag}>`);
+    }
+  }, '');
+}
+
+export function createAriaLabel(attrs) {
+  const { title, desc } = attrs;
+
+  if (!title && !desc) {
+    return '';
+  }
+
+  return `aria-labelledby="${accessibilityElements.filter((tag) => attrs[tag]).join(' ')}"`;
+}
+
 export function formatAttrs(attrs) {
   return Object.keys(attrs)
+    .filter((attr) => !(accessibilityElements.includes(attr)))
     .map((key) => !isNone(attrs[key]) && `${key}="${attrs[key]}"`)
     .filter((attr) => attr)
     .join(' ');
 }
 
 export function symbolUseFor(assetId, attrs = {}) {
-  return `<svg ${formatAttrs(attrs)}><use xlink:href="${assetId}" /></svg>`;
+  return `<svg ${formatAttrs(attrs)}${createAriaLabel(attrs)}><use xlink:href="${assetId}" />${createAccessibilityElements(attrs)}</svg>`;
 }
 
 export function inlineSvgFor(assetId, getInlineAsset, attrs = {}) {
@@ -31,7 +58,7 @@ export function inlineSvgFor(assetId, getInlineAsset, attrs = {}) {
     delete svgAttrs.size;
   }
 
-  return `<svg ${formatAttrs(svgAttrs)}>${asset.content}</svg>`;
+  return `<svg ${formatAttrs(svgAttrs)}${createAriaLabel(attrs)}>${createAccessibilityElements(attrs)}${asset.content}</svg>`;
 }
 
 export default function makeSvg(assetId, attrs = {}, getInlineAsset) {
